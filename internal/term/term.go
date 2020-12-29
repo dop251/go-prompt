@@ -10,16 +10,20 @@ import (
 )
 
 var (
-	saveTermios     *unix.Termios
+	saveTermios     unix.Termios
 	saveTermiosFD   int
 	saveTermiosOnce sync.Once
 )
 
-func getOriginalTermios(fd int) (*unix.Termios, error) {
+func getOriginalTermios(fd int) (unix.Termios, error) {
 	var err error
 	saveTermiosOnce.Do(func() {
+		var s *unix.Termios
 		saveTermiosFD = fd
-		saveTermios, err = termios.Tcgetattr(uintptr(fd))
+		s, err = termios.Tcgetattr(uintptr(fd))
+		if err == nil {
+			saveTermios = *s
+		}
 	})
 	return saveTermios, err
 }
@@ -30,5 +34,5 @@ func Restore() error {
 	if err != nil {
 		return err
 	}
-	return termios.Tcsetattr(uintptr(saveTermiosFD), termios.TCSANOW, o)
+	return termios.Tcsetattr(uintptr(saveTermiosFD), termios.TCSANOW, &o)
 }
